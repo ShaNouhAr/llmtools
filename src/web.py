@@ -132,8 +132,7 @@ class ModelDownloadRequest(BaseModel):
 # --- Pages ---
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "model": get_model(),
         "modules": list_modules(),
     })
@@ -152,7 +151,7 @@ def _chat_page_context(chat=None, module_id=""):
 
 @app.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request, module: str = ""):
-    return templates.TemplateResponse("chat.html", {"request": request, **_chat_page_context(None, module)})
+    return templates.TemplateResponse(request, "chat.html", _chat_page_context(None, module))
 
 
 @app.get("/chat/{chat_id}", response_class=HTMLResponse)
@@ -161,16 +160,16 @@ async def chat_with_id_page(request: Request, chat_id: str):
     if not c:
         raise HTTPException(404, "Conversation introuvable")
     module_id = c.get("module_id", "")
-    return templates.TemplateResponse("chat.html", {"request": request, **_chat_page_context(c, module_id)})
+    return templates.TemplateResponse(request, "chat.html", _chat_page_context(c, module_id))
 
 @app.get("/config", response_class=HTMLResponse)
 async def config_page(request: Request):
-    return templates.TemplateResponse("config.html", {"request": request, "model": get_model()})
+    return templates.TemplateResponse(request, "config.html", {"model": get_model()})
 
 
 @app.get("/models", response_class=HTMLResponse)
 async def models_page(request: Request):
-    return templates.TemplateResponse("models.html", {"request": request, "model": get_model()})
+    return templates.TemplateResponse(request, "models.html", {"model": get_model()})
 
 
 
