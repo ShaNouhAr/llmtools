@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Configuration{% endblock %}
+{% block content %}
+<div class="config-page">
+  <div class="config-card">
+    <h1 class="config-title">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configuration
+    </h1>
+
+    <!-- Model selection -->
+    <section class="config-section">
+      <h2>Modele LLM</h2>
+      <p class="config-hint">Choisissez le modele charge dans LM Studio.</p>
+
+      <div class="config-model-current">
+        <span class="config-label">Modele actif :</span>
+        <span class="model-badge" id="currentModel">{{ model }}</span>
+      </div>
+
+      <div class="config-model-list" id="modelList">
+        <div class="config-loading" id="modelsLoading">
+          <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+          Chargement des modeles depuis LM Studio...
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" id="refreshModelsBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Rafraichir
+      </button>
+      <span class="config-status hidden" id="modelStatus"></span>
+    </section>
+
+    <!-- Info section -->
+    <section class="config-section">
+      <h2>Informations</h2>
+      <div class="config-info-grid" id="configInfo">
+        <div class="config-info-item">
+          <span class="config-info-label">URL LM Studio</span>
+          <span class="config-info-value" id="infoUrl">-</span>
+        </div>
+        <div class="config-info-item">
+          <span class="config-info-label">Timeout outils</span>
+          <span class="config-info-value" id="infoTimeout">-</span>
+        </div>
+        <div class="config-info-item">
+          <span class="config-info-label">Max iterations agent</span>
+          <span class="config-info-value" id="infoIterations">-</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.CONFIG_MODELS_URL = '/api/models';
+  window.CONFIG_SELECT_URL = '/api/models/select';
+  window.CONFIG_INFO_URL = '/api/config';
+</script>
+{% endblock %}

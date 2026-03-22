@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Modèles{% endblock %}
+{% block content %}
+<div class="models-page">
+  <div class="models-header">
+    <div class="models-header-left">
+      <h1>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Modèles
+      </h1>
+      <p class="models-subtitle">Modèles chargés dans LM Studio. Sélectionnez celui à utiliser.</p>
+    </div>
+    <button class="btn btn-secondary" id="refreshModelsBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Rafraîchir
+    </button>
+  </div>
+
+  <!-- Model Store Controls -->
+  <div class="models-controls">
+    <div class="search-wrap">
+      {{ render_icon('default', 'search-icon')|safe }} <!-- We will style this to look like a search icon or just use a generic one -->
+      <input type="text" id="modelSearchInput" class="model-search" placeholder="Rechercher des modèles GGUF sur HuggingFace (ex: phi-3, mixtral)..." />
+      <button class="btn btn-primary" id="modelSearchBtn">Rechercher</button>
+    </div>
+  </div>
+
+  <!-- Hub Search Results -->
+  <div class="models-section hidden" id="hubSection">
+    <h2>Résultats du Hub</h2>
+    <div class="models-status hidden" id="searchStatus">
+      <div class="models-status-icon"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+      <span>Recherche en cours...</span>
+    </div>
+    <div class="models-grid" id="hubModelsGrid"></div>
+  </div>
+
+  <!-- Local Models -->
+  <div class="models-section">
+    <h2>Modèles Locaux</h2>
+    <!-- Connection status -->
+    <div class="models-status" id="modelsStatus">
+      <div class="models-status-icon">
+        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+      </div>
+      <span>Connexion à LM Studio...</span>
+    </div>
+    <!-- Model grid -->
+    <div class="models-grid" id="modelsGrid">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Info section -->
+  <div class="models-info">
+    <h2>Informations</h2>
+    <div class="config-info-grid" id="configInfo">
+      <div class="config-info-item">
+        <span class="config-info-label">URL LM Studio</span>
+        <span class="config-info-value" id="infoUrl">-</span>
+      </div>
+      <div class="config-info-item">
+        <span class="config-info-label">Timeout outils</span>
+        <span class="config-info-value" id="infoTimeout">-</span>
+      </div>
+      <div class="config-info-item">
+        <span class="config-info-label">Max itérations agent</span>
+        <span class="config-info-value" id="infoIterations">-</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.CONFIG_MODELS_URL = '/api/models';
+  window.CONFIG_SELECT_URL = '/api/models/select';
+  window.CONFIG_INFO_URL = '/api/config';
+  window.HUB_SEARCH_URL = '/api/models/search';
+  window.HUB_DOWNLOAD_URL = '/api/models/download';
+  window.MODELS_STORE_MODE = true;
+</script>
+{% endblock %}

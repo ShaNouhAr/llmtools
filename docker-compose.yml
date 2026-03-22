@@ -1,0 +1,42 @@
+# LLMTools — Plateforme multi-modules avec LLM (LM Studio)
+# LM Studio est auto-decouvert sur le reseau. Assurez-vous qu'il ecoute sur 0.0.0.0.
+
+services:
+  llmtools:
+    build: .
+    container_name: llmtools
+    ports:
+      - "8000:8000"
+    volumes:
+      - llmtools_data:/data
+      - llmtools_workspace:/workspace
+    environment:
+      - LLMTOOLS_REPORTS_DIR=/data/reports
+      - LLMTOOLS_CHATS_DIR=/data/chats
+      # LM_STUDIO_BASE_URL is auto-discovered. Set it only to override:
+      # - LM_STUDIO_BASE_URL=http://host.docker.internal:1234/v1
+      - LM_STUDIO_MODEL=${LM_STUDIO_MODEL:-local-model}
+      - LM_STUDIO_API_KEY=${LM_STUDIO_API_KEY:-not-needed}
+      - TOOL_TIMEOUT=${TOOL_TIMEOUT:-120}
+      - AGENT_MAX_ITERATIONS=${AGENT_MAX_ITERATIONS:-50}
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  llmtools_data:
+  llmtools_workspace:

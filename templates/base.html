@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}LLMTools{% endblock %} — Plateforme LLM</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+  <link rel="stylesheet" href="/static/style.css?v=31">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <a href="/" class="logo">
+      {{ render_icon('zap')|safe }} LLMTools
+    </a>
+    <nav class="nav">
+      <a href="/chat" class="{% if request.url.path.startswith('/chat') %}active{% endif %}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat
+      </a>
+      <a href="/models" class="{% if request.url.path.startswith('/models') or request.url.path.startswith('/config') %}active{% endif %}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Modèles
+      </a>
+    </nav>
+    <div class="model-picker-wrap">
+      <button class="model-badge" id="modelPickerBtn" title="Changer de modèle">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span id="modelPickerLabel">{{ model }}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.4"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="model-picker-dropdown hidden" id="modelPickerDropdown">
+        <div class="model-picker-header">
+          <span>Modèles disponibles</span>
+          <button class="model-picker-refresh" id="modelPickerRefresh" title="Rafraîchir">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+        <div class="model-picker-list" id="modelPickerList">
+          <div class="model-picker-loading"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="main {% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    LLMTools — Plateforme multi-modules avec LLM — Usage autorisé uniquement.
+  </footer>
+  {% block scripts %}{% endblock %}
+  <script src="/static/app.js?v=20"></script>
+</body>
+</html>

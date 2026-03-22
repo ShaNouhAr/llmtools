@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{% if chat %}{{ chat.title }}{% elif current_module %}{{ current_module.name }}{% else %}Chat{% endif %}{% endblock %}
+{% block main_class %}main--full{% endblock %}
+{% block content %}
+<div class="chat-page">
+  <aside class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      <a href="/chat{% if module_id %}?module={{ module_id }}{% endif %}" class="chat-sidebar-new">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nouveau chat
+      </a>
+    </div>
+    <!-- Module selector -->
+    <div class="chat-sidebar-modules">
+      <label class="sidebar-label">Module</label>
+      <select id="moduleSelect" class="module-select">
+        <option value="" {% if not module_id %}selected{% endif %}>🌍 Global (Sans module)</option>
+        {% for m in modules %}
+        <option value="{{ m.id }}" {% if module_id == m.id %}selected{% endif %}>{{ render_icon(m.icon)|safe }} {{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="chat-sidebar-scroll">
+      <ul class="chat-list" id="chatList">
+        {% for c in chats %}
+        <li class="chat-list-li">
+          <a href="/chat/{{ c.id }}" class="chat-list-item {% if chat and chat.id == c.id %}active{% endif %}" data-chat-id="{{ c.id }}">
+            <span class="chat-list-title">{{ c.title }}</span>
+            <span class="chat-list-meta">{{ c.updated_at[:10] }}</span>
+          </a>
+          <button class="chat-delete-btn" data-delete-id="{{ c.id }}" title="Supprimer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </aside>
+
+  <div class="chat-center">
+    <div class="chat-layout">
+      <div class="chat-scroll" id="chatScroll">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-welcome" id="chatWelcome">
+            <div class="chat-welcome-icon">
+              {% if current_module %}
+              <span class="welcome-module-icon">{{ render_icon(current_module.icon)|safe }}</span>
+              {% else %}
+              <span class="welcome-module-icon">{{ render_icon('default')|safe }}</span>
+              {% endif %}
+            </div>
+            <h2>{% if current_module %}{{ current_module.name }}{% else %}LLMTools{% endif %}</h2>
+            <p>{% if current_module %}{{ current_module.description }}{% else %}Sélectionnez un module dans la sidebar ou posez une question.{% endif %}</p>
+
+            <!-- SSH connection form for ssh_diag module -->
+            <div class="ssh-connect-form {% if not current_module or current_module.id != 'ssh_diag' %}hidden{% endif %}" id="sshConnectForm">
+              <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -4px;"><polyline points="8 10 12 14 16 10"></polyline><line x1="12" y1="14" x2="12" y2="22"></line><line x1="4" y1="4" x2="20" y2="4"></line></svg> 
+                Connexion SSH
+              </h3>
+              <p class="ssh-form-hint">Renseignez les informations de connexion. L'agent se connectera automatiquement.</p>
+              <div class="ssh-form-fields">
+                <div class="ssh-field">
+                  <label for="sshHost">Hôte</label>
+                  <input type="text" id="sshHost" placeholder="192.168.1.100" />
+                </div>
+                <div class="ssh-field ssh-field-small">
+                  <label for="sshPort">Port</label>
+                  <input type="number" id="sshPort" value="22" />
+                </div>
+                <div class="ssh-field">
+                  <label for="sshUser">Utilisateur</label>
+                  <input type="text" id="sshUser" placeholder="root" />
+                </div>
+                <div class="ssh-field">
+                  <label for="sshPassword">Mot de passe</label>
+                  <input type="password" id="sshPassword" placeholder="••••••••" />
+                </div>
+              </div>
+            </div>
+
+            <div class="chat-suggestions" id="chatSuggestions">
+              {% if current_module and current_module.suggestions %}
+                {% for s in current_module.suggestions %}
+                <button class="chat-suggestion" data-text="{{ s.text }}">{{ s.label }}</button>
+                {% endfor %}
+              {% else %}
+                <button class="chat-suggestion" data-text="Scanne les ports et services de 10.0.0.1">Scanner une cible</button>
+                <button class="chat-suggestion" data-text="Fais un diagnostic complet de cette machine Linux">Diagnostic Linux</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="chat-input-wrap">
+          <div class="chat-input-controls">
+            <label class="agent-toggle" title="Active le mode Agent (execution automatique d'outils)">
+              <input type="checkbox" id="agentModeToggle">
+              <span class="agent-toggle-slider"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span class="agent-toggle-label">Agent</span>
+            </label>
+            <label class="auto-toggle hidden" id="autoToggleWrap" title="Auto: execute sans demander.">
+              <input type="checkbox" id="autoModeToggle" checked>
+              <span class="agent-toggle-slider"></span>
+              <span class="agent-toggle-label">Auto</span>
+            </label>
+            <button type="button" id="filesPanelToggle" class="btn btn-ghost btn-files" title="Voir les fichiers du workspace">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Fichiers
+            </button>
+          </div>
+          <form id="chatForm" autocomplete="off">
+            <div class="chat-input-box">
+              <textarea name="message" id="messageInput" rows="1" placeholder="Demandez une action ou posez une question..." required></textarea>
+              <button type="submit" id="sendBtn" class="chat-send-btn" title="Envoyer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+              <button type="button" id="stopBtn" class="chat-stop-btn hidden" title="Arreter">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              </button>
+            </div>
+          </form>
+          <div class="chat-hint">Entrée pour envoyer &middot; Maj+Entrée pour sauter une ligne</div>
+        </div>
+      </div>
+    </div><!-- /chat-layout -->
+
+  <!-- Panneau Fichiers workspace -->
+  <aside class="files-panel hidden" id="filesPanel">
+    <div class="files-panel-header">
+      <span class="files-panel-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Fichiers
+      </span>
+      <button class="files-panel-close" id="filesPanelClose" title="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="files-panel-body" id="filesPanelBody">
+      <div class="files-empty" id="filesEmpty">Aucun fichier pour l'instant. L'agent sauvegardera ses resultats ici.</div>
+      <div class="files-tree" id="filesTree"></div>
+    </div>
+    <div class="files-preview hidden" id="filesPreview">
+      <div class="files-preview-header">
+        <span class="files-preview-name" id="filesPreviewName"></span>
+        <button class="files-preview-back" id="filesPreviewBack">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Retour
+        </button>
+      </div>
+      <pre class="files-preview-content" id="filesPreviewContent"></pre>
+    </div>
+  </aside>
+
+  </div><!-- /chat-center -->
+</div><!-- /chat-page -->
+
+{% endblock %}
+{% block scripts %}
+<script>
+  window.CHAT_STREAM_URL = '/api/chat/stream';
+  window.AGENT_STREAM_URL = '/api/agent/stream';
+  window.AGENT_APPROVE_URL = '/api/agent/approve';
+  window.CHAT_ID = {% if chat %}"{{ chat.id }}"{% else %}null{% endif %};
+  window.CHAT_MESSAGES = {% if chat %}{{ chat.messages | tojson | safe }}{% else %}[]{% endif %};
+  window.MODULE_ID = "{{ module_id or '' }}";
+</script>
+{% endblock %}
