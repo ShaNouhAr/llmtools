@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from openai import APIConnectionError
 import httpx
 
-from src.core.agent import get_client, get_model, set_model, list_models, check_lm_studio, stream_chat, get_base_url
+from src.core.agent import get_client, get_model, set_model, list_models, check_lm_studio, stream_chat, get_base_url, set_base_url
 from src.core.agent_loop import agent_loop, get_session
 from src.core.tools import register_cancel_event, unregister_cancel_event
 from src.core import chats
@@ -122,6 +122,9 @@ class ChatUpdate(BaseModel):
 
 
 # --- Model Store Schemas ---
+class LMStudioURLRequest(BaseModel):
+    url: str
+
 class ModelHubSearch(BaseModel):
     query: str
 
@@ -473,11 +476,22 @@ async def api_models_download(body: ModelDownloadRequest):
             logger.error("Download trigger failed: %s", e)
             raise HTTPException(500, str(e))
 
+@app.post("/api/config/url")
+async def api_set_url(body: LMStudioURLRequest):
+    url = body.url.strip()
+    if not url:
+        raise HTTPException(400, "URL requise")
+    set_base_url(url)
+    loop = asyncio.get_event_loop()
+    status = await loop.run_in_executor(None, check_lm_studio)
+    return {"ok": True, "url": get_base_url(), "connected": status.get("connected", False)}
+
+
 @app.get("/api/config")
 async def api_get_config():
     base_url = get_base_url()
     return {
-        "lm_studio_url": base_url + " (auto-discovered)",
+        "lm_studio_url": base_url,
         "current_model": get_model(),
         "tool_timeout": int(os.getenv("TOOL_TIMEOUT", "120")),
         "max_iterations": int(os.getenv("AGENT_MAX_ITERATIONS", "50")),

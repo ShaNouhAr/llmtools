@@ -1254,6 +1254,66 @@
       });
   }
 
+  // ===== LM Studio URL connection =====
+  var setUrlEndpoint = window.CONFIG_SET_URL;
+  var lmStudioUrlInput = document.getElementById('lmStudioUrl');
+  var saveUrlBtn = document.getElementById('saveUrlBtn');
+  var urlStatusEl = document.getElementById('urlStatus');
+
+  function showUrlStatus(text, ok) {
+    if (!urlStatusEl) return;
+    urlStatusEl.textContent = text;
+    urlStatusEl.className = 'models-connection-status ' + (ok ? 'models-connection-status-ok' : 'models-connection-status-err');
+    urlStatusEl.classList.remove('hidden');
+  }
+
+  if (saveUrlBtn && lmStudioUrlInput && setUrlEndpoint) {
+    saveUrlBtn.addEventListener('click', function () {
+      var raw = lmStudioUrlInput.value.trim();
+      if (!raw) return;
+      var url = raw.match(/^https?:\/\//) ? raw : 'http://' + raw;
+
+      saveUrlBtn.disabled = true;
+      saveUrlBtn.textContent = 'Connexion...';
+      showUrlStatus('Test de connexion en cours...', true);
+
+      fetch(setUrlEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok && data.connected) {
+            showUrlStatus('Connecte a LM Studio sur ' + data.url, true);
+            if (window.MODELS_STORE_MODE) loadStoreModels();
+            else loadModels();
+            loadConfigInfo();
+            if (modelPickerLabel) loadPickerModels();
+          } else if (data.ok) {
+            showUrlStatus('URL enregistree (' + data.url + ') mais LM Studio ne repond pas. Verifiez que le serveur est demarre.', false);
+            loadConfigInfo();
+          } else {
+            showUrlStatus('Erreur lors de la configuration.', false);
+          }
+        })
+        .catch(function (err) {
+          showUrlStatus('Erreur reseau : ' + err.message, false);
+        })
+        .finally(function () {
+          saveUrlBtn.disabled = false;
+          saveUrlBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Connecter';
+        });
+    });
+
+    lmStudioUrlInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveUrlBtn.click();
+      }
+    });
+  }
+
   function loadConfigInfo() {
     if (!configInfoUrl) return;
     fetch(configInfoUrl)
@@ -1265,6 +1325,17 @@
         if (urlEl) urlEl.textContent = data.lm_studio_url || '-';
         if (timeoutEl) timeoutEl.textContent = data.tool_timeout + 's';
         if (iterEl) iterEl.textContent = data.max_iterations;
+        // Pre-fill URL input with current URL (strip http:// and /v1)
+        if (lmStudioUrlInput && data.lm_studio_url) {
+          var cleanUrl = data.lm_studio_url
+            .replace(/\s*\(.*\)$/, '')
+            .replace(/^https?:\/\//, '')
+            .replace(/\/v1\/?$/, '')
+            .trim();
+          if (cleanUrl && !lmStudioUrlInput.value) {
+            lmStudioUrlInput.value = cleanUrl;
+          }
+        }
       })
       .catch(function () {});
   }

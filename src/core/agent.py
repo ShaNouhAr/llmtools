@@ -166,6 +166,22 @@ def get_base_url() -> str:
     return _get_base_url()
 
 
+def set_base_url(url: str):
+    """Set a custom LM Studio URL (remote or local)."""
+    global _discovered_url, _discovery_ts, _models_cache, _models_cache_ts
+    url = url.strip().rstrip("/")
+    if not url.endswith("/v1"):
+        url += "/v1"
+    _discovered_url = url
+    _discovery_ts = time.time() + 86400 * 365  # pin for ~1 year
+    _models_cache = []
+    _models_cache_ts = 0
+    config = _load_config()
+    config["discovered_url"] = url
+    _save_config(config)
+    logger.info("LM Studio URL set manually: %s", url)
+
+
 def get_model() -> str:
     if _active_model:
         return _active_model

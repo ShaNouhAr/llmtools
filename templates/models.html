@@ -51,21 +51,34 @@
     </div>
   </div>
 
-  <!-- Info section -->
-  <div class="models-info">
-    <h2>Informations</h2>
-    <div class="config-info-grid" id="configInfo">
-      <div class="config-info-item">
-        <span class="config-info-label">URL LM Studio</span>
-        <span class="config-info-value" id="infoUrl">-</span>
+  <!-- Connexion LM Studio -->
+  <div class="models-connection">
+    <h2>Connexion LM Studio</h2>
+    <p class="models-connection-hint">Entrez l'adresse du serveur LM Studio (IP ou hostname avec port). Exemple : <code>192.168.1.50:1234</code></p>
+    <div class="models-connection-form">
+      <div class="models-connection-input-wrap">
+        <span class="models-connection-prefix">http://</span>
+        <input type="text" id="lmStudioUrl" class="models-connection-input" placeholder="192.168.1.50:1234" autocomplete="off" spellcheck="false">
       </div>
-      <div class="config-info-item">
-        <span class="config-info-label">Timeout outils</span>
-        <span class="config-info-value" id="infoTimeout">-</span>
+      <button class="btn btn-primary" id="saveUrlBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Connecter
+      </button>
+    </div>
+    <div class="models-connection-status hidden" id="urlStatus"></div>
+
+    <div class="models-connection-info">
+      <div class="models-connection-info-item">
+        <span class="models-connection-info-label">URL active</span>
+        <span class="models-connection-info-value" id="infoUrl">-</span>
       </div>
-      <div class="config-info-item">
-        <span class="config-info-label">Max itérations agent</span>
-        <span class="config-info-value" id="infoIterations">-</span>
+      <div class="models-connection-info-item">
+        <span class="models-connection-info-label">Timeout outils</span>
+        <span class="models-connection-info-value" id="infoTimeout">-</span>
+      </div>
+      <div class="models-connection-info-item">
+        <span class="models-connection-info-label">Max itérations agent</span>
+        <span class="models-connection-info-value" id="infoIterations">-</span>
       </div>
     </div>
   </div>
@@ -76,6 +89,7 @@
   window.CONFIG_MODELS_URL = '/api/models';
   window.CONFIG_SELECT_URL = '/api/models/select';
   window.CONFIG_INFO_URL = '/api/config';
+  window.CONFIG_SET_URL = '/api/config/url';
   window.HUB_SEARCH_URL = '/api/models/search';
   window.HUB_DOWNLOAD_URL = '/api/models/download';
   window.MODELS_STORE_MODE = true;

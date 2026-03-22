@@ -2638,3 +2638,125 @@ a:hover { color: var(--accent-hover); }
   font-family: var(--font-mono);
   font-size: 0.9rem;
 }
+
+/* LM Studio connection section (models page) */
+.models-connection {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.models-connection h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.models-connection-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.models-connection-hint code {
+  background: var(--bg-hover);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.models-connection-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.models-connection-input-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: var(--bg-input, var(--bg-main));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.models-connection-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.models-connection-prefix {
+  padding: 0.65rem 0.4rem 0.65rem 0.85rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.models-connection-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  padding: 0.65rem 0.85rem 0.65rem 0;
+  outline: none;
+}
+
+.models-connection-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.models-connection-status {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.models-connection-status-ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.models-connection-status-err {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.models-connection-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.models-connection-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.models-connection-info-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.models-connection-info-value {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--text);
+}
