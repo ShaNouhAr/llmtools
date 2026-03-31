@@ -9,7 +9,10 @@ import threading
 import time
 from openai import OpenAI
 
+from openai import OpenAI
+
 from src.core.tools import COMMON_EXECUTORS, COMMON_TOOL_DEFINITIONS, execute_tool
+from src.core.agent import do_completion
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +251,7 @@ def agent_loop(
                 "Formule chaque proposition comme une question courte. Pas d'outils."
             )
             try:
-                response = client.chat.completions.create(
+                response = do_completion(
                     model=model,
                     messages=full_messages + [{"role": "system", "content": recap_prompt}],
                     tool_choice="none",
@@ -259,6 +262,11 @@ def agent_loop(
                 logger.exception("LLM error during recap")
                 yield {"type": "error", "content": f"Erreur LLM: {str(e)}"}
                 break
+                
+            if not getattr(response, "choices", None):
+                yield {"type": "error", "content": "Erreur agent: Le modèle n'a renvoyé aucune réponse (probablement bloqué par un filtre de sécurité)."}
+                break
+                
             content = (response.choices[0].message.content or "").strip()
             if not content:
                 content = "Tâche terminée. Consultez les fichiers dans l'onglet **Fichiers**."
@@ -295,10 +303,14 @@ def agent_loop(
                 create_kwargs["tools"] = all_definitions
                 create_kwargs["tool_choice"] = "auto"
 
-            response = client.chat.completions.create(**create_kwargs)
+            response = do_completion(**create_kwargs)
         except Exception as e:
             logger.exception("LLM error at iteration %d", step_num)
             yield {"type": "error", "content": f"Erreur LLM: {str(e)}"}
+            break
+
+        if not getattr(response, "choices", None):
+            yield {"type": "error", "content": "Erreur agent: La requête a été censurée ou bloquée par les filtres de sécurité du modèle (aucun contenu renvoyé). L'agent doit s'arrêter."}
             break
 
         choice = response.choices[0]
@@ -478,7 +490,7 @@ def agent_loop(
             "Ajoute une section '## Et maintenant ?' avec 2 à 4 propositions concrètes de suites. Pas d'outils."
         )
         try:
-            response = client.chat.completions.create(
+            response = do_completion(
                 model=model,
                 messages=full_messages + [{"role": "system", "content": recap}],
                 tool_choice="none",

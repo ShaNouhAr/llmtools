@@ -1,40 +1,94 @@
 {% extends "base.html" %}
 {% block title %}Configuration{% endblock %}
 {% block content %}
+<style>
+  .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #2d2d2d; padding-bottom: 0.5rem; }
+  .tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; color: #888; transition: all 0.2s; }
+  .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+  .tab.active { color: #fff; background: #2d2d2d; border-bottom: 2px solid #00f0ff; margin-bottom: -11px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+  .api-key-group { margin-bottom: 1.5rem; }
+  .api-key-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.95rem; }
+  .api-key-group input, .api-key-group select { width: 100%; padding: 0.75rem; border: 1px solid #333; border-radius: 6px; background: #1a1a1a; color: #fff; font-family: inherit; }
+  .api-key-group input:focus, .api-key-group select:focus { border-color: #00f0ff; outline: none; }
+</style>
+
 <div class="config-page">
   <div class="config-card">
     <h1 class="config-title">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Configuration
+      Configuration Modèles
     </h1>
 
-    <!-- Model selection -->
-    <section class="config-section">
-      <h2>Modele LLM</h2>
-      <p class="config-hint">Choisissez le modele charge dans LM Studio.</p>
+    <div class="tabs">
+      <div class="tab active" id="tab-local" onclick="switchProviderMode('local')">Local (LM Studio)</div>
+      <div class="tab" id="tab-cloud" onclick="switchProviderMode('cloud')">Cloud APIs</div>
+    </div>
 
-      <div class="config-model-current">
-        <span class="config-label">Modele actif :</span>
-        <span class="model-badge" id="currentModel">{{ model }}</span>
-      </div>
+    <!-- LOCAL TAB -->
+    <div id="content-local" class="tab-content active">
+        <section class="config-section">
+          <h2>Modèle Local</h2>
+          <p class="config-hint">Choisissez le modèle chargé dans LM Studio.</p>
+          <div class="config-model-current">
+            <span class="config-label">Modèle actif :</span>
+            <span class="model-badge" id="currentModel">{{ model }}</span>
+          </div>
+          <div class="config-model-list" id="modelList">
+            <div class="config-loading" id="modelsLoading">
+              <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+              Chargement des modèles depuis LM Studio...
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="refreshModelsBtn">Rafraîchir</button>
+          <span class="config-status hidden" id="modelStatus"></span>
+        </section>
+    </div>
 
-      <div class="config-model-list" id="modelList">
-        <div class="config-loading" id="modelsLoading">
-          <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
-          Chargement des modeles depuis LM Studio...
-        </div>
-      </div>
+    <!-- CLOUD TAB -->
+    <div id="content-cloud" class="tab-content">
+        <section class="config-section">
+          <h2>Configuration Cloud APIs</h2>
+          <p class="config-hint">Renseignez vos clés d'API (sauvegardées en local) pour utiliser des modèles propriétaires (LiteLLM).</p>
+          
+          <div class="api-key-group">
+            <label>Modèle Cloud Actif :</label>
+            <select id="cloudModelSelect">
+                <!-- OpenAI -->
+                <option value="gpt-4o">OpenAI : GPT-4o</option>
+                <option value="gpt-4o-mini">OpenAI : GPT-4o-Mini</option>
+                <!-- Anthropic -->
+                <option value="claude-3-5-sonnet-20240620">Anthropic : Claude 3.5 Sonnet</option>
+                <option value="claude-3-opus-20240229">Anthropic : Claude 3 Opus</option>
+                <option value="claude-3-haiku-20240307">Anthropic : Claude 3 Haiku</option>
+                <!-- Google -->
+                <option value="gemini/gemini-1.5-pro-latest">Google : Gemini 1.5 Pro</option>
+                <option value="gemini/gemini-1.5-flash">Google : Gemini 1.5 Flash</option>
+            </select>
+          </div>
 
-      <button class="btn btn-secondary" id="refreshModelsBtn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Rafraichir
-      </button>
-      <span class="config-status hidden" id="modelStatus"></span>
-    </section>
+          <div class="api-key-group">
+            <label>Clé API OpenAI (GPT)</label>
+            <input type="password" id="openaiKey" placeholder="sk-..." autocomplete="new-password" />
+          </div>
+          <div class="api-key-group">
+            <label>Clé API Anthropic (Claude)</label>
+            <input type="password" id="anthropicKey" placeholder="sk-ant-..." autocomplete="new-password" />
+          </div>
+          <div class="api-key-group">
+            <label>Clé API Google (Gemini)</label>
+            <input type="password" id="geminiKey" placeholder="AIza..." autocomplete="new-password" />
+          </div>
+
+          <button class="btn btn-primary" onclick="saveProviderConfig()">Sauvegarder Configuration</button>
+          <span class="config-status hidden" id="cloudStatus"></span>
+        </section>
+    </div>
 
     <!-- Info section -->
     <section class="config-section">
-      <h2>Informations</h2>
+      <h2>Informations Système</h2>
       <div class="config-info-grid" id="configInfo">
         <div class="config-info-item">
           <span class="config-info-label">URL LM Studio</span>
@@ -45,7 +99,7 @@
           <span class="config-info-value" id="infoTimeout">-</span>
         </div>
         <div class="config-info-item">
-          <span class="config-info-label">Max iterations agent</span>
+          <span class="config-info-label">Max. itérations agent</span>
           <span class="config-info-value" id="infoIterations">-</span>
         </div>
       </div>
@@ -53,10 +107,98 @@
   </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
   window.CONFIG_MODELS_URL = '/api/models';
   window.CONFIG_SELECT_URL = '/api/models/select';
   window.CONFIG_INFO_URL = '/api/config';
+  
+  let currentProviderMode = 'local';
+
+  async function fetchProviderConfig() {
+      try {
+          const res = await fetch('/api/config/provider');
+          const data = await res.json();
+          currentProviderMode = data.provider_mode;
+          switchProviderMode(currentProviderMode, false);
+          
+          if(data.cloud_model) {
+              document.getElementById('cloudModelSelect').value = data.cloud_model;
+          }
+          if(data.api_keys) {
+              document.getElementById('openaiKey').placeholder = data.api_keys.openai || "sk-...";
+              document.getElementById('anthropicKey').placeholder = data.api_keys.anthropic || "sk-ant-...";
+              document.getElementById('geminiKey').placeholder = data.api_keys.gemini || "AIza...";
+              
+              if(data.api_keys.openai) document.getElementById('openaiKey').value = data.api_keys.openai;
+              if(data.api_keys.anthropic) document.getElementById('anthropicKey').value = data.api_keys.anthropic;
+              if(data.api_keys.gemini) document.getElementById('geminiKey').value = data.api_keys.gemini;
+          }
+      } catch (e) {
+          console.error('Erreur config provider', e);
+      }
+  }
+
+  function switchProviderMode(mode, save = true) {
+      currentProviderMode = mode;
+      
+      // Update UI Tabs
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      document.getElementById('tab-' + mode).classList.add('active');
+      document.getElementById('content-' + mode).classList.add('active');
+      
+      if(save) saveProviderConfig();
+  }
+
+  async function saveProviderConfig() {
+      const payload = {
+          provider_mode: currentProviderMode,
+          cloud_model: document.getElementById('cloudModelSelect').value,
+          api_keys: {
+              openai: document.getElementById('openaiKey').value,
+              anthropic: document.getElementById('anthropicKey').value,
+              gemini: document.getElementById('geminiKey').value
+          }
+      };
+      
+      const st = document.getElementById('cloudStatus');
+      
+      try {
+          const res = await fetch('/api/config/provider', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.ok) {
+              if(currentProviderMode === 'cloud') {
+                  st.textContent = "Sauvegardé avec succès ! App activée en mode Cloud.";
+                  st.className = "config-status text-success";
+              }
+              // Rafraichir l'UI des input pour montrer les placeholders maskes (via un GET)
+              fetchProviderConfig();
+          } else {
+              if(currentProviderMode === 'cloud') {
+                  st.textContent = "Erreur de sauvegarde.";
+                  st.className = "config-status text-error";
+              }
+          }
+      } catch (e) {
+          if(currentProviderMode === 'cloud') {
+              st.textContent = "Erreur réseau.";
+              st.className = "config-status text-error";
+          }
+      }
+  }
+
+  // Hook into original specific logic if necessary
+  window.addEventListener('DOMContentLoaded', () => {
+      fetchProviderConfig();
+  });
 </script>
+<!-- On inclut le script d'origine pour continuer a gerer modelList pour le Local -->
+<script src="{{ url_for('static', path='js/config.js') }}"></script>
 {% endblock %}

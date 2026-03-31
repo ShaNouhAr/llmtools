@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from openai import APIConnectionError
 import httpx
 
-from src.core.agent import get_client, get_model, set_model, list_models, check_lm_studio, stream_chat, get_base_url, set_base_url
+from src.core.agent import get_client, get_model, set_model, list_models, check_lm_studio, stream_chat, get_base_url, set_base_url, get_provider_config, set_provider_config
 from src.core.agent_loop import agent_loop, get_session
 from src.core.tools import register_cancel_event, unregister_cancel_event
 from src.core import chats
@@ -399,8 +399,111 @@ async def api_delete_chat(chat_id: str):
 
 
 # --- API Config / Models ---
+class ProviderConfigUpdate(BaseModel):
+    provider_mode: str
+    cloud_model: str | None = None
+    api_keys: dict | None = None
+
 class ModelSelect(BaseModel):
     model_id: str
+
+@app.get("/api/config/provider")
+async def api_get_provider_config():
+    cfg = get_provider_config()
+    safe_keys = {}
+    for k, v in cfg.get("api_keys", {}).items():
+        if v:
+            if len(v) > 8:
+                safe_keys[k] = v[:3] + "*" * 10 + v[-3:]
+            else:
+                safe_keys[k] = "***"
+        else:
+            safe_keys[k] = ""
+    return {
+        "provider_mode": cfg.get("provider_mode", "local"),
+        "cloud_model": cfg.get("cloud_model", "gpt-4o"),
+        "api_keys": safe_keys
+    }
+
+@app.post("/api/config/provider")
+async def api_set_provider_config(body: ProviderConfigUpdate):
+    keys_to_update = {}
+    if body.api_keys:
+        for k, v in body.api_keys.items():
+            if v and "***" not in v:
+                keys_to_update[k] = v
+            elif not v:
+                keys_to_update[k] = ""
+    
+    set_provider_config(body.provider_mode, body.cloud_model, keys_to_update)
+    return {"ok": True}
+
+class CloudFetchRequest(BaseModel):
+    provider: str
+    api_key: str
+
+@app.post("/api/models/cloud_fetch")
+async def api_models_cloud_fetch(body: CloudFetchRequest):
+    provider = body.provider.lower()
+    key = body.api_key.strip()
+    if not key:
+        raise HTTPException(400, "Clé API vide")
+        
+    models = []
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            if provider == "openai":
+                resp = await client.get("https://api.openai.com/v1/models", headers={"Authorization": f"Bearer {key}"}, timeout=10)
+                resp.raise_for_status()
+                data = resp.json().get("data", [])
+                
+                def is_valid_openai(m_id):
+                    id = m_id.lower()
+                    exclude = ["vision", "audio", "realtime", "instruct", "babbage", "davinci", "dall-e", "whisper", "tts"]
+                    if any(x in id for x in exclude): return False
+                    return "gpt-4" in id or "gpt-3.5" in id or "o1" in id or "o3" in id
+                
+                models = [m["id"] for m in data if is_valid_openai(m["id"])]
+                
+            elif provider == "gemini":
+                resp = await client.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={key}", timeout=10)
+                resp.raise_for_status()
+                data = resp.json().get("models", [])
+                
+                def is_valid_gemini(m_name):
+                    id = m_name.lower()
+                    exclude = ["experimental", "preview", "nano", "lyria", "robotics", "banana", "-it", "bison", "gecko", "gemma", "tuning", "learn"]
+                    if any(x in id for x in exclude): return False
+                    return "gemini" in id
+                
+                models = [m["name"].replace("models/", "gemini/") for m in data if "generateContent" in m.get("supportedGenerationMethods", []) and is_valid_gemini(m["name"])]
+                
+            elif provider == "anthropic":
+                if not key.startswith("sk-ant-"):
+                    raise HTTPException(401, "Format de clé Anthropic invalide")
+                models = [
+                    "claude-3-5-sonnet-20241022",
+                    "claude-3-5-sonnet-20240620", 
+                    "claude-3-5-haiku-20241022",
+                    "claude-3-opus-20240229",
+                    "claude-3-haiku-20240307"
+                ]
+            else:
+                raise HTTPException(400, "Provider inconnu")
+                
+            # Tri naturel inversé (les plus récents / gros en haut)
+            return {"models": sorted(list(set(models)), reverse=True)}
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in (401, 403):
+                raise HTTPException(401, "Clé API invalide ou non autorisée")
+            raise HTTPException(502, f"Erreur correspondante avec l'API {provider} ({e.response.status_code})")
+        except httpx.RequestError as e:
+            raise HTTPException(500, f"Erreur réseau : impossible de contacter {provider}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, f"Erreur inconnue : {str(e)}")
 
 @app.get("/api/models")
 async def api_list_models():

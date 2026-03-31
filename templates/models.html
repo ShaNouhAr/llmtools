@@ -1,87 +1,147 @@
 {% extends "base.html" %}
-{% block title %}Modèles{% endblock %}
+{% block title %}Modèles & Cloud APIs{% endblock %}
 {% block content %}
+<style>
+  .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #2d2d2d; padding-bottom: 0.5rem; margin-left: 2rem; margin-right: 2rem; }
+  .tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; color: #888; transition: all 0.2s; }
+  .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+  .tab.active { color: #fff; background: #2d2d2d; border-bottom: 2px solid #00f0ff; margin-bottom: -11px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+  .api-key-group { margin-bottom: 1.5rem; }
+  .api-key-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.95rem; }
+  .api-key-group input, .api-key-group select { width: 100%; padding: 0.75rem; border: 1px solid #333; border-radius: 6px; background: #1a1a1a; color: #fff; font-family: inherit; }
+  .api-key-group input:focus, .api-key-group select:focus { border-color: #00f0ff; outline: none; }
+  .cloud-panel { background: #111; padding: 2rem; border-radius: 8px; border: 1px solid #333; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+
 <div class="models-page">
   <div class="models-header">
     <div class="models-header-left">
       <h1>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        Modèles
+        Modèles & Cloud APIs
       </h1>
-      <p class="models-subtitle">Modèles chargés dans LM Studio. Sélectionnez celui à utiliser.</p>
-    </div>
-    <button class="btn btn-secondary" id="refreshModelsBtn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      Rafraîchir
-    </button>
-  </div>
-
-  <!-- Model Store Controls -->
-  <div class="models-controls">
-    <div class="search-wrap">
-      {{ render_icon('default', 'search-icon')|safe }} <!-- We will style this to look like a search icon or just use a generic one -->
-      <input type="text" id="modelSearchInput" class="model-search" placeholder="Rechercher des modèles GGUF sur HuggingFace (ex: phi-3, mixtral)..." />
-      <button class="btn btn-primary" id="modelSearchBtn">Rechercher</button>
+      <p class="models-subtitle">Gérez vos modèles locaux (LM Studio) ou vos clés d'API Cloud.</p>
     </div>
   </div>
 
-  <!-- Hub Search Results -->
-  <div class="models-section hidden" id="hubSection">
-    <h2>Résultats du Hub</h2>
-    <div class="models-status hidden" id="searchStatus">
-      <div class="models-status-icon"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
-      <span>Recherche en cours...</span>
-    </div>
-    <div class="models-grid" id="hubModelsGrid"></div>
+  <div class="tabs">
+    <div class="tab active" id="tab-local" onclick="switchProviderMode('local')">Local (LM Studio)</div>
+    <div class="tab" id="tab-cloud" onclick="switchProviderMode('cloud')">Cloud APIs</div>
   </div>
 
-  <!-- Local Models -->
-  <div class="models-section">
-    <h2>Modèles Locaux</h2>
-    <!-- Connection status -->
-    <div class="models-status" id="modelsStatus">
-      <div class="models-status-icon">
-        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+  <!-- LOCAL TAB -->
+  <div id="content-local" class="tab-content active" style="margin-left: 2rem; margin-right: 2rem;">
+    <!-- Model Store Controls -->
+    <div class="models-controls" style="margin-left: 0; margin-right: 0; margin-top: 0;">
+      <div class="search-wrap">
+        {{ render_icon('default', 'search-icon')|safe }}
+        <input type="text" id="modelSearchInput" class="model-search" placeholder="Rechercher des modèles GGUF sur HuggingFace (ex: phi-3, mixtral)..." />
+        <button class="btn btn-primary" id="modelSearchBtn">Rechercher</button>
       </div>
-      <span>Connexion à LM Studio...</span>
     </div>
-    <!-- Model grid -->
-    <div class="models-grid" id="modelsGrid">
-      <!-- Populated by JS -->
-    </div>
-  </div>
 
-  <!-- Connexion LM Studio -->
-  <div class="models-connection">
-    <h2>Connexion LM Studio</h2>
-    <p class="models-connection-hint">Entrez l'adresse du serveur LM Studio (IP ou hostname avec port). Exemple : <code>192.168.1.50:1234</code></p>
-    <div class="models-connection-form">
-      <div class="models-connection-input-wrap">
-        <span class="models-connection-prefix">http://</span>
-        <input type="text" id="lmStudioUrl" class="models-connection-input" placeholder="192.168.1.50:1234" autocomplete="off" spellcheck="false">
+    <!-- Hub Search Results -->
+    <div class="models-section hidden" id="hubSection">
+      <h2>Résultats du Hub</h2>
+      <div class="models-status hidden" id="searchStatus">
+        <div class="models-status-icon"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+        <span>Recherche en cours...</span>
       </div>
-      <button class="btn btn-primary" id="saveUrlBtn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Connecter
+      <div class="models-grid" id="hubModelsGrid"></div>
+    </div>
+
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2>Modèles Locaux</h2>
+      <button class="btn btn-secondary" id="refreshModelsBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Rafraîchir
       </button>
     </div>
-    <div class="models-connection-status hidden" id="urlStatus"></div>
+    
+    <!-- Local Models -->
+    <div class="models-section" style="margin-top:0;">
+      <div class="models-status" id="modelsStatus">
+        <div class="models-status-icon">
+          <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+        </div>
+        <span>Connexion à LM Studio...</span>
+      </div>
+      <div class="models-grid" id="modelsGrid"></div>
+    </div>
 
-    <div class="models-connection-info">
-      <div class="models-connection-info-item">
-        <span class="models-connection-info-label">URL active</span>
-        <span class="models-connection-info-value" id="infoUrl">-</span>
+    <!-- Connexion LM Studio -->
+    <div class="models-connection">
+      <h2>Connexion LM Studio</h2>
+      <p class="models-connection-hint">Entrez l'adresse du serveur LM Studio (IP ou hostname avec port). Exemple : <code>192.168.1.50:1234</code></p>
+      <div class="models-connection-form">
+        <div class="models-connection-input-wrap">
+          <span class="models-connection-prefix">http://</span>
+          <input type="text" id="lmStudioUrl" class="models-connection-input" placeholder="192.168.1.50:1234" autocomplete="off" spellcheck="false">
+        </div>
+        <button class="btn btn-primary" id="saveUrlBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Connecter
+        </button>
       </div>
-      <div class="models-connection-info-item">
-        <span class="models-connection-info-label">Timeout outils</span>
-        <span class="models-connection-info-value" id="infoTimeout">-</span>
-      </div>
-      <div class="models-connection-info-item">
-        <span class="models-connection-info-label">Max itérations agent</span>
-        <span class="models-connection-info-value" id="infoIterations">-</span>
+      <div class="models-connection-status hidden" id="urlStatus"></div>
+
+      <div class="models-connection-info">
+        <div class="models-connection-info-item">
+          <span class="models-connection-info-label">URL active</span>
+          <span class="models-connection-info-value" id="infoUrl">-</span>
+        </div>
+        <div class="models-connection-info-item">
+          <span class="models-connection-info-label">Timeout outils</span>
+          <span class="models-connection-info-value" id="infoTimeout">-</span>
+        </div>
+        <div class="models-connection-info-item">
+          <span class="models-connection-info-label">Max itérations agent</span>
+          <span class="models-connection-info-value" id="infoIterations">-</span>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- CLOUD TAB -->
+  <div id="content-cloud" class="tab-content" style="margin-left: 2rem; margin-right: 2rem; margin-bottom: 2rem;">
+    <div class="cloud-panel">
+      <h2>Configuration Cloud APIs</h2>
+      <p style="color:#888; margin-bottom:2rem; margin-top:0.5rem">
+        Sélectionnez le fournisseur, connectez votre clé pour récupérer la liste des modèles à jour, puis choisissez votre modèle.
+      </p>
+
+      <div class="api-key-group">
+        <label>Fournisseur Cloud :</label>
+        <select id="cloudProviderSelect" onchange="onProviderChange()">
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="gemini">Google (Gemini)</option>
+        </select>
+      </div>
+
+      <div class="api-key-group">
+        <label id="keyInputLabel">Clé API OpenAI (sk-...)</label>
+        <div style="display:flex; gap:0.5rem">
+            <input type="password" id="cloudApiKeyInput" placeholder="Saisir la clé..." autocomplete="new-password" style="flex:1" />
+            <button class="btn btn-secondary" onclick="fetchCloudModels()">Connecter & Lister</button>
+        </div>
+      </div>
+
+      <div class="api-key-group" id="cloudModelSelectGroup" style="display:none; margin-top:2rem; padding-top:1.5rem; border-top:1px solid #333">
+        <label>Sélectionner le modèle dynamique :</label>
+        <select id="cloudModelSelect"></select>
+      </div>
+
+      <div style="margin-top:2rem">
+        <button class="btn btn-primary" onclick="saveProviderConfig()" id="saveCloudBtn" style="display:none">Sauvegarder Configuration Active</button>
+        <span class="config-status hidden" id="cloudStatus" style="margin-left:1rem"></span>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 {% block scripts %}
@@ -93,5 +153,154 @@
   window.HUB_SEARCH_URL = '/api/models/search';
   window.HUB_DOWNLOAD_URL = '/api/models/download';
   window.MODELS_STORE_MODE = true;
+  
+  let currentProviderMode = 'local';
+  let activeCloudModel = '';
+  let knownKeys = { openai: '', anthropic: '', gemini: '' };
+
+  async function fetchProviderConfig() {
+      try {
+          const res = await fetch('/api/config/provider');
+          const data = await res.json();
+          currentProviderMode = data.provider_mode;
+          switchProviderMode(currentProviderMode, false);
+          
+          if(data.cloud_model) {
+              activeCloudModel = data.cloud_model;
+              if (activeCloudModel.includes('gpt') || activeCloudModel.includes('o1')) document.getElementById('cloudProviderSelect').value = 'openai';
+              else if (activeCloudModel.includes('claude')) document.getElementById('cloudProviderSelect').value = 'anthropic';
+              else if (activeCloudModel.includes('gemini')) document.getElementById('cloudProviderSelect').value = 'gemini';
+          }
+          if(data.api_keys) {
+              knownKeys.openai = data.api_keys.openai || '';
+              knownKeys.anthropic = data.api_keys.anthropic || '';
+              knownKeys.gemini = data.api_keys.gemini || '';
+          }
+          onProviderChange();
+      } catch (e) {
+          console.error('Erreur config provider', e);
+      }
+  }
+
+  function onProviderChange() {
+      const p = document.getElementById('cloudProviderSelect').value;
+      const labels = { 
+          openai: "Clé API OpenAI (sk-...)", 
+          anthropic: "Clé API Anthropic (sk-ant-...)", 
+          gemini: "Clé API Google (AIza...)" 
+      };
+      
+      document.getElementById('keyInputLabel').textContent = labels[p];
+      const kInput = document.getElementById('cloudApiKeyInput');
+      kInput.value = knownKeys[p].includes("***") ? "" : knownKeys[p];
+      kInput.placeholder = knownKeys[p] || "Saisir ma clé...";
+      
+      document.getElementById('cloudModelSelectGroup').style.display = 'none';
+      document.getElementById('saveCloudBtn').style.display = 'none';
+  }
+
+  async function fetchCloudModels() {
+      const p = document.getElementById('cloudProviderSelect').value;
+      const kInput = document.getElementById('cloudApiKeyInput').value;
+      const k = kInput || (knownKeys[p].includes("***") ? null : knownKeys[p]); // We cannot send masked keys to backend for validation unless backend handles it explicitly, but here we require a fresh key if we want to fetch dynamically, OR we let backend use the stored key in agent.py. Let's send the masked key, wait, our backend cloud_fetch expects a REAL key. So user must provide it if it was masked, OR we can modify backend to read _api_keys[provider] if '***' is sent.
+      // Better: if input is empty, and knownKeys[p] has "***", alert user.
+      if (!kInput && (!knownKeys[p] || knownKeys[p].includes("***"))) {
+          alert("Veuillez saisir votre clé API en clair pour récupérer la liste des modèles.");
+          return;
+      }
+      
+      const keyToSend = kInput || knownKeys[p]; // backend will fail if it's *** for OpenAI
+      
+      const st = document.getElementById('cloudStatus');
+      st.classList.remove('hidden');
+      st.style.color = "#888";
+      st.textContent = "Recherche des modèles sur " + p + "...";
+      
+      try {
+          const res = await fetch('/api/models/cloud_fetch', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({provider: p, api_key: keyToSend})
+          });
+          const data = await res.json();
+          if(res.ok) {
+              if (kInput) knownKeys[p] = kInput; // update local cache
+              const sel = document.getElementById('cloudModelSelect');
+              sel.innerHTML = "";
+              data.models.forEach(m => {
+                  const opt = document.createElement('option');
+                  opt.value = m;
+                  opt.textContent = m;
+                  sel.appendChild(opt);
+              });
+              if(activeCloudModel && data.models.includes(activeCloudModel)) {
+                  sel.value = activeCloudModel;
+              }
+              document.getElementById('cloudModelSelectGroup').style.display = 'block';
+              document.getElementById('saveCloudBtn').style.display = 'inline-block';
+              st.textContent = "✓ " + data.models.length + " modèles trouvés.";
+              st.style.color = "#00f0ff";
+          } else {
+              st.textContent = data.detail || "Paramètres incorrects.";
+              st.style.color = "red";
+          }
+      } catch (e) {
+          st.textContent = "Erreur réseau.";
+          st.style.color = "red";
+      }
+  }
+
+  function switchProviderMode(mode, save = true) {
+      currentProviderMode = mode;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + mode).classList.add('active');
+      document.getElementById('content-' + mode).classList.add('active');
+      
+      if(save && mode === 'local') {
+          saveProviderConfig(true); 
+      }
+  }
+
+  async function saveProviderConfig(localOnly = false) {
+      const payload = {
+          provider_mode: currentProviderMode,
+      };
+      
+      if (!localOnly && currentProviderMode === 'cloud') {
+          const p = document.getElementById('cloudProviderSelect').value;
+          const kInput = document.getElementById('cloudApiKeyInput').value;
+          
+          payload.cloud_model = document.getElementById('cloudModelSelect').value;
+          payload.api_keys = {};
+          if (kInput && !kInput.includes("***")) {
+              payload.api_keys[p] = kInput;
+          }
+      }
+      
+      const st = document.getElementById('cloudStatus');
+      if(st) { st.classList.remove('hidden'); st.textContent = "Sauvegarde..."; st.style.color = "#888"; }
+      
+      try {
+          const res = await fetch('/api/config/provider', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.ok && st) {
+              st.textContent = "✓ Configuration activée !";
+              st.style.color = "#00f0ff";
+              fetchProviderConfig();
+          }
+      } catch (e) {
+          if(st) { st.textContent = "Erreur de connexion."; st.style.color = "red"; }
+      }
+      if(st) setTimeout(() => st.classList.add('hidden'), 5000);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+      fetchProviderConfig();
+  });
 </script>
 {% endblock %}

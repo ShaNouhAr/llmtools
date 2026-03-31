@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
+RUN pip install --no-cache-dir --ignore-installed --break-system-packages -r requirements.txt
 
 COPY src/ ./src/
 COPY templates/ ./templates/

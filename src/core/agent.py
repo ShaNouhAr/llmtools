@@ -11,6 +11,10 @@ import time
 import urllib.request
 import urllib.error
 from openai import OpenAI
+import litellm
+
+# Désactiver les logs verbeux de litellm
+litellm.suppress_debug_info = True
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +44,47 @@ Réponds de façon concise et actionnable."""
 
 _saved_cfg = _load_config()
 _active_model: str | None = _saved_cfg.get("active_model")
+_provider_mode: str = _saved_cfg.get("provider_mode", "local")
+_cloud_model: str = _saved_cfg.get("cloud_model", "gpt-4o")
+_api_keys: dict = _saved_cfg.get("api_keys", {"openai": "", "anthropic": "", "gemini": ""})
+
+# Set API keys in environment for litellm
+for k, v in _api_keys.items():
+    if v:
+        os.environ[f"{k.upper()}_API_KEY"] = v
+
 _models_cache: list[dict] = []
 _models_cache_ts: float = 0
 _MODELS_CACHE_TTL = 30  # seconds
+
+def get_provider_config() -> dict:
+    return {
+        "provider_mode": _provider_mode,
+        "cloud_model": _cloud_model,
+        "api_keys": _api_keys
+    }
+
+def set_provider_config(mode: str, cloud_model: str, keys: dict):
+    global _provider_mode, _cloud_model, _api_keys
+    _provider_mode = mode
+    if cloud_model:
+        _cloud_model = cloud_model
+    
+    for k, v in keys.items():
+        if v is not None:
+            _api_keys[k] = v
+    
+    cfg = _load_config()
+    cfg["provider_mode"] = _provider_mode
+    cfg["cloud_model"] = _cloud_model
+    cfg["api_keys"] = _api_keys
+    _save_config(cfg)
+    
+    for k, v in _api_keys.items():
+        if v:
+            os.environ[f"{k.upper()}_API_KEY"] = v
+            
+    logger.info("Provider config updated: %s", _provider_mode)
 
 # ========== Auto-discovery ==========
 
@@ -183,6 +225,8 @@ def set_base_url(url: str):
 
 
 def get_model() -> str:
+    if _provider_mode == "cloud":
+        return _cloud_model
     if _active_model:
         return _active_model
     if _models_cache:
@@ -221,6 +265,14 @@ def list_models(client: OpenAI | None = None, force_refresh: bool = False) -> li
 
 def check_lm_studio() -> dict:
     """Verifie la connexion a LM Studio. Retourne status + info."""
+    if _provider_mode == "cloud":
+        return {
+            "connected": True,
+            "model_count": 0,
+            "current_model": _cloud_model,
+            "url": "Cloud API (LiteLLM)",
+            "provider_mode": "cloud"
+        }
     try:
         client = get_client()
         models = list_models(client, force_refresh=True)
@@ -229,19 +281,31 @@ def check_lm_studio() -> dict:
             "model_count": len(models),
             "current_model": get_model(),
             "url": _get_base_url(),
+            "provider_mode": "local"
         }
     except Exception as e:
         logger.warning("LM Studio health check failed: %s", e)
-        return {"connected": False, "error": str(e), "current_model": get_model(), "url": _get_base_url()}
+        return {"connected": False, "error": str(e), "current_model": get_model(), "url": _get_base_url(), "provider_mode": "local"}
+
+
+def do_completion(**kwargs):
+    """Wrapper generique LiteLLM gérant le basculement Local/Cloud."""
+    model = kwargs.get("model", get_model())
+    
+    if _provider_mode == "local":
+        kwargs["api_base"] = _get_base_url()
+        kwargs["api_key"] = os.getenv("LM_STUDIO_API_KEY", "not-needed")
+        if not model.startswith("openai/"):
+            kwargs["model"] = f"openai/{model}"
+    else:
+        kwargs["model"] = model
+        
+    return litellm.completion(**kwargs)
 
 
 def chat(messages: list[dict], system_prompt: str | None = None, client: OpenAI | None = None) -> str:
-    if client is None:
-        client = get_client()
-    model = get_model()
     prompt = system_prompt or DEFAULT_CHAT_SYSTEM_PROMPT
-    r = client.chat.completions.create(
-        model=model,
+    r = do_completion(
         messages=[{"role": "system", "content": prompt}] + messages,
         temperature=0.4,
         max_tokens=2048,
@@ -252,12 +316,8 @@ def chat(messages: list[dict], system_prompt: str | None = None, client: OpenAI 
 
 
 def stream_chat(messages: list[dict], system_prompt: str | None = None, client: OpenAI | None = None):
-    if client is None:
-        client = get_client()
-    model = get_model()
     prompt = system_prompt or DEFAULT_CHAT_SYSTEM_PROMPT
-    stream = client.chat.completions.create(
-        model=model,
+    stream = do_completion(
         messages=[{"role": "system", "content": prompt}] + messages,
         temperature=0.4,
         max_tokens=2048,
