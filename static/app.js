@@ -996,7 +996,7 @@
   function loadPickerModels() {
     if (!modelPickerList) return;
     modelPickerList.innerHTML = '<div class="model-picker-loading"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
-    fetch('/api/models')
+    fetch('/api/models?picker=1')
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var models = data.models || [];

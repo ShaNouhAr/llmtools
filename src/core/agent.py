@@ -235,12 +235,17 @@ def get_model() -> str:
 
 
 def set_model(model_id: str):
-    global _active_model
-    _active_model = model_id
+    global _active_model, _cloud_model, _provider_mode
     config = _load_config()
-    config["active_model"] = model_id
+    if _provider_mode == "cloud":
+        _cloud_model = model_id
+        config["cloud_model"] = model_id
+        logger.info("Modele Cloud actif selectionne et sauvegarde: %s", model_id)
+    else:
+        _active_model = model_id
+        config["active_model"] = model_id
+        logger.info("Modele Local actif selectionne et sauvegarde: %s", model_id)
     _save_config(config)
-    logger.info("Modele actif change et sauvegarde: %s", model_id)
 
 
 def list_models(client: OpenAI | None = None, force_refresh: bool = False) -> list[dict]:

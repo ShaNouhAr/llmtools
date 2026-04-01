@@ -506,12 +506,50 @@ async def api_models_cloud_fetch(body: CloudFetchRequest):
             raise HTTPException(500, f"Erreur inconnue : {str(e)}")
 
 @app.get("/api/models")
-async def api_list_models():
+async def api_list_models(picker: bool = False):
+    cfg = get_provider_config()
+    current = get_model()
+    mode = cfg.get("provider_mode", "local")
+    
+    if mode == "cloud" and picker:
+        models = [
+            {"id": "gpt-4o", "owned_by": "OpenAI"},
+            {"id": "gpt-4o-mini", "owned_by": "OpenAI"},
+            {"id": "o3-mini", "owned_by": "OpenAI"},
+            {"id": "o1-preview", "owned_by": "OpenAI"},
+            {"id": "o1-mini", "owned_by": "OpenAI"},
+            {"id": "claude-3-5-sonnet-20241022", "owned_by": "Anthropic"},
+            {"id": "claude-3-5-haiku-20241022", "owned_by": "Anthropic"},
+            {"id": "claude-3-opus-20240229", "owned_by": "Anthropic"},
+            {"id": "gemini-2.5-flash", "owned_by": "Google"},
+            {"id": "gemini-2.0-flash", "owned_by": "Google"},
+            {"id": "gemini-1.5-pro", "owned_by": "Google"}
+        ]
+        available = []
+        keys = cfg.get("api_keys", {})
+        if keys.get("openai", ""):
+            available.extend([m for m in models if "gpt" in m["id"] or "o1" in m["id"] or "o3" in m["id"]])
+        if keys.get("anthropic", ""):
+            available.extend([m for m in models if "claude" in m["id"]])
+        if keys.get("gemini", ""):
+            available.extend([m for m in models if "gemini" in m["id"]])
+            
+        if not available:
+            available = [{"id": "gpt-4o", "owned_by": "OpenAI"}, {"id": "claude-3-5-sonnet-20241022", "owned_by": "Anthropic"}]
+            
+        if current not in [m["id"] for m in available]:
+            available.insert(0, {"id": current, "owned_by": "Actuel"})
+            
+        return {"models": available, "current": current, "provider_mode": "cloud"}
+    
     loop = asyncio.get_event_loop()
     client = get_client()
-    models = await loop.run_in_executor(None, lambda: list_models(client))
-    current = get_model()
-    return {"models": models, "current": current}
+    try:
+        models_list = await loop.run_in_executor(None, lambda: list_models(client))
+    except Exception:
+        models_list = []
+    
+    return {"models": models_list, "current": current, "provider_mode": mode}
 
 @app.post("/api/models/select")
 async def api_select_model(body: ModelSelect):
