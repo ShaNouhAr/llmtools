@@ -12,14 +12,24 @@
     </div>
     <!-- Module selector -->
     <div class="chat-sidebar-modules">
-      <label class="sidebar-label">Module</label>
-      <select id="moduleSelect" class="module-select">
-        <option value="" {% if not module_id %}selected{% endif %}>🌍 Global (Sans module)</option>
+      <label class="sidebar-label" style="margin-bottom: 0.5rem; display: block; font-size: 0.75rem; color: var(--text-muted); padding: 0 0.85rem;">Modules</label>
+      <ul class="chat-list">
+        <li class="chat-list-li">
+          <a href="/chat" class="chat-list-item {% if not module_id %}active{% endif %}">
+            <span class="chat-list-title"><span style="margin-right: 8px; font-size: 0.9em; display: flex; align-items: center;">🌍</span> Global</span>
+          </a>
+        </li>
         {% for m in modules %}
-        <option value="{{ m.id }}" {% if module_id == m.id %}selected{% endif %}>{{ render_icon(m.icon)|safe }} {{ m.name }}</option>
+        <li class="chat-list-li">
+          <a href="/chat?module={{ m.id }}" class="chat-list-item {% if module_id == m.id %}active{% endif %}">
+            <span class="chat-list-title"><span style="margin-right: 8px; display: flex; align-items: center;">{{ render_icon(m.icon)|safe }}</span> {{ m.name }}</span>
+          </a>
+        </li>
         {% endfor %}
-      </select>
+      </ul>
     </div>
+    
+    <label class="sidebar-label" style="margin-top: 1rem; margin-bottom: 0.5rem; display: block; font-size: 0.75rem; color: var(--text-muted); padding: 0 0.85rem;">Conversations</label>
     <div class="chat-sidebar-scroll">
       <ul class="chat-list" id="chatList">
         {% for c in chats %}

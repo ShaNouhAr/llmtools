@@ -710,54 +710,41 @@ a:hover { color: var(--accent-hover); }
 .chat-list-item {
   display: flex;
   flex-direction: column;
-  padding: 0.6rem 0.85rem;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   text-decoration: none;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
-  transition: all var(--transition);
+  margin-bottom: 2px;
+  border: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
   position: relative;
   overflow: hidden;
 }
 
 .chat-list-item:hover { 
-  background: var(--bg-hover); 
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text); 
-  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .chat-list-item.active {
-  background: var(--accent-glow);
-  color: var(--accent);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.chat-list-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--accent);
-  border-radius: 4px 0 0 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
 }
 
 .chat-list-title {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0;
 }
 
 .chat-list-meta {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
+  display: none;
 }
 
 .chat-list-li {
