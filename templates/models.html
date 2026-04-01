@@ -13,6 +13,8 @@
   .api-key-group input, .api-key-group select { width: 100%; padding: 0.75rem; border: 1px solid #333; border-radius: 6px; background: #1a1a1a; color: #fff; font-family: inherit; }
   .api-key-group input:focus, .api-key-group select:focus { border-color: #00f0ff; outline: none; }
   .cloud-panel { background: #111; padding: 2rem; border-radius: 8px; border: 1px solid #333; }
+  .mode-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px; background: #444; color: #fff; font-weight: 600; text-transform: uppercase; }
+  .mode-badge.active { background: #00c853; color: #fff; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 
@@ -28,12 +30,17 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" id="tab-local" onclick="switchProviderMode('local')">Local (LM Studio)</div>
-    <div class="tab" id="tab-cloud" onclick="switchProviderMode('cloud')">Cloud APIs</div>
+    <div class="tab active" id="tab-local" onclick="switchTab('local')">Local (LM Studio) <span class="mode-badge" id="badge-local">Actif</span></div>
+    <div class="tab" id="tab-cloud" onclick="switchTab('cloud')">Cloud APIs <span class="mode-badge" id="badge-cloud">Inactif</span></div>
   </div>
 
   <!-- LOCAL TAB -->
   <div id="content-local" class="tab-content active" style="margin-left: 2rem; margin-right: 2rem;">
+    <div id="localBanner" style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); padding: 1rem 1.5rem; border-radius: 6px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+      <span>Le mode <strong>Local</strong> est inactif. L'activer désactivera les API Cloud.</span>
+      <button class="btn btn-primary" onclick="activateProviderMode('local')">Activer le mode Local</button>
+    </div>
+    
     <!-- Model Store Controls -->
     <div class="models-controls" style="margin-left: 0; margin-right: 0; margin-top: 0;">
       <div class="search-wrap">
@@ -107,6 +114,11 @@
 
   <!-- CLOUD TAB -->
   <div id="content-cloud" class="tab-content" style="margin-left: 2rem; margin-right: 2rem; margin-bottom: 2rem;">
+    <div id="cloudBanner" style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); padding: 1rem 1.5rem; border-radius: 6px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+      <span>Les <strong>Cloud APIs</strong> sont inactives. Les activer désactivera le mode Local.</span>
+      <button class="btn btn-primary" onclick="activateProviderMode('cloud')">Activer les Cloud APIs</button>
+    </div>
+    
     <div class="cloud-panel">
       <h2>Configuration Cloud APIs</h2>
       <p style="color:#888; margin-bottom:2rem; margin-top:0.5rem">
@@ -136,7 +148,7 @@
       </div>
 
       <div style="margin-top:2rem">
-        <button class="btn btn-primary" onclick="saveProviderConfig()" id="saveCloudBtn" style="display:none">Sauvegarder Configuration Active</button>
+        <button class="btn btn-secondary" onclick="saveProviderConfig()" id="saveCloudBtn" style="display:none">Enregistrer le modèle</button>
         <span class="config-status hidden" id="cloudStatus" style="margin-left:1rem"></span>
       </div>
     </div>
@@ -154,7 +166,7 @@
   window.HUB_DOWNLOAD_URL = '/api/models/download';
   window.MODELS_STORE_MODE = true;
   
-  let currentProviderMode = 'local';
+  let activeProviderMode = 'local';
   let activeCloudModel = '';
   let knownKeys = { openai: '', anthropic: '', gemini: '' };
 
@@ -162,8 +174,9 @@
       try {
           const res = await fetch('/api/config/provider');
           const data = await res.json();
-          currentProviderMode = data.provider_mode;
-          switchProviderMode(currentProviderMode, false);
+          activeProviderMode = data.provider_mode;
+          switchTab(activeProviderMode);
+          updateModeBadges();
           
           if(data.cloud_model) {
               activeCloudModel = data.cloud_model;
@@ -177,6 +190,13 @@
               knownKeys.gemini = data.api_keys.gemini || '';
           }
           onProviderChange();
+          
+          if(data.cloud_model) {
+              const sel = document.getElementById('cloudModelSelect');
+              sel.innerHTML = `<option value="${activeCloudModel}">${activeCloudModel} (Actuel)</option>`;
+              document.getElementById('cloudModelSelectGroup').style.display = 'block';
+              document.getElementById('saveCloudBtn').style.display = 'inline-block';
+          }
       } catch (e) {
           console.error('Erreur config provider', e);
       }
@@ -250,24 +270,48 @@
       }
   }
 
-  function switchProviderMode(mode, save = true) {
-      currentProviderMode = mode;
+  function switchTab(mode) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.getElementById('tab-' + mode).classList.add('active');
       document.getElementById('content-' + mode).classList.add('active');
-      
-      if(save && mode === 'local') {
-          saveProviderConfig(true); 
+  }
+
+  function updateModeBadges() {
+      const bannerLocal = document.getElementById('localBanner');
+      const bannerCloud = document.getElementById('cloudBanner');
+
+      if (activeProviderMode === 'local') {
+          document.getElementById('badge-local').textContent = 'Actif';
+          document.getElementById('badge-local').className = 'mode-badge active';
+          document.getElementById('badge-cloud').textContent = 'Inactif';
+          document.getElementById('badge-cloud').className = 'mode-badge';
+          
+          if (bannerLocal) bannerLocal.style.display = 'none';
+          if (bannerCloud) bannerCloud.style.display = 'flex';
+      } else {
+          document.getElementById('badge-local').textContent = 'Inactif';
+          document.getElementById('badge-local').className = 'mode-badge';
+          document.getElementById('badge-cloud').textContent = 'Actif';
+          document.getElementById('badge-cloud').className = 'mode-badge active';
+          
+          if (bannerLocal) bannerLocal.style.display = 'flex';
+          if (bannerCloud) bannerCloud.style.display = 'none';
       }
+  }
+
+  function activateProviderMode(mode) {
+      activeProviderMode = mode;
+      saveProviderConfig(mode === 'local');
+      updateModeBadges();
   }
 
   async function saveProviderConfig(localOnly = false) {
       const payload = {
-          provider_mode: currentProviderMode,
+          provider_mode: activeProviderMode,
       };
       
-      if (!localOnly && currentProviderMode === 'cloud') {
+      if (!localOnly && activeProviderMode === 'cloud') {
           const p = document.getElementById('cloudProviderSelect').value;
           const kInput = document.getElementById('cloudApiKeyInput').value;
           
