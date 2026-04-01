@@ -289,6 +289,30 @@
     }).catch(function () {});
   }
 
+  // ===== Custom Confirm Modal =====
+  function customConfirm(message, onConfirm) {
+    var overlay = document.createElement('div');
+    overlay.className = 'modal';
+    overlay.innerHTML =
+      '<div class="modal-content" style="max-width: 350px;">' +
+        '<h3>Confirmation</h3>' +
+        '<p style="margin-bottom: 1.5rem; color: var(--text-secondary);">' + esc(message) + '</p>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-ghost" id="confirmCancel">Annuler</button>' +
+          '<button class="btn btn-danger" id="confirmOk">Supprimer</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    function close() { if(overlay.parentNode) document.body.removeChild(overlay); }
+
+    overlay.querySelector('#confirmCancel').addEventListener('click', close);
+    overlay.querySelector('#confirmOk').addEventListener('click', function() {
+      close();
+      onConfirm();
+    });
+  }
+
   function bindChatListClicks() {
     if (!chatListEl) return;
     chatListEl.querySelectorAll('.chat-list-item').forEach(function (link) {
@@ -303,7 +327,11 @@
         e.preventDefault();
         e.stopPropagation();
         var id = btn.getAttribute('data-delete-id');
-        if (id && confirm('Supprimer cette conversation ?')) deleteChat(id);
+        if (id) {
+          customConfirm('Voulez-vous vraiment supprimer cette conversation ?', function() {
+            deleteChat(id);
+          });
+        }
       });
     });
   }

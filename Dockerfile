@@ -2,6 +2,7 @@
 FROM kalilinux/kali-rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Python + pip + build essentials
 RUN apt-get update && apt-get install -y --no-install-recommends \
