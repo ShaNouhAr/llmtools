@@ -762,20 +762,21 @@
     var contentArea = agentMsg.querySelector('.msg-content');
     contentArea.innerHTML = '';
 
-    var statusBanner = createStatusBanner();
-    contentArea.appendChild(statusBanner);
-    scrollToBottom(true);
-
     var fullResponse = '';
     var tokenBuffer = '';
     var agentLog = '';
     var responseDiv = null;
     var currentToolBlock = null;
+
     var toolsContainer = document.createElement('div');
     toolsContainer.className = 'agent-steps';
     contentArea.appendChild(toolsContainer);
 
-    currentAbort = new AbortController();
+    var statusBanner = createStatusBanner();
+    contentArea.appendChild(statusBanner);
+    scrollToBottom(true);
+    
+    var currentAbort = new AbortController();
     try {
       var res = await fetch(AGENT_URL, {
         method: 'POST',
