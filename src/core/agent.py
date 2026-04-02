@@ -304,8 +304,19 @@ def do_completion(**kwargs):
             kwargs["model"] = f"openai/{model}"
     else:
         kwargs["model"] = model
-        
-    return litellm.completion(**kwargs)
+
+    kwargs["timeout"] = 180  # Provide generous timeout for long pentest tool results processing
+    
+    retries = 3
+    for attempt in range(retries):
+        try:
+            return litellm.completion(**kwargs)
+        except Exception as e:
+            if attempt == retries - 1:
+                raise
+            logger.warning("LiteLLM completion error (attempt %d/%d): %s. Retrying in 3s...", attempt + 1, retries, str(e))
+            import time
+            time.sleep(3)
 
 
 def chat(messages: list[dict], system_prompt: str | None = None, client: OpenAI | None = None) -> str:

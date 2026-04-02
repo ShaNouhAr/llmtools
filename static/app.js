@@ -110,15 +110,20 @@
   var filesPreviewBack = document.getElementById('filesPreviewBack');
   var filesPreviewContent = document.getElementById('filesPreviewContent');
 
-  // Show/hide auto toggle based on agent mode
+  // Retrieve saved agent mode preference
   if (agentModeToggle) {
+    var savedState = localStorage.getItem('agentModeActive');
+    // If not set, let it remain checked by default (as per HTML)
+    if (savedState !== null) {
+      agentModeToggle.checked = (savedState === 'true');
+    }
     agentModeToggle.addEventListener('change', function () {
-      if (autoToggleWrap) autoToggleWrap.classList.toggle('hidden', !agentModeToggle.checked);
+      localStorage.setItem('agentModeActive', agentModeToggle.checked);
     });
   }
 
   function isAgentMode() { return agentModeToggle && agentModeToggle.checked; }
-  function isAutoMode() { return !autoModeToggle || autoModeToggle.checked; }
+  function isAutoMode() { return true; } // Always execute tools directly in Agent Mode
 
   // ===== Auto-resize textarea =====
   function autoResize() {
@@ -197,10 +202,108 @@
       return;
     }
     hideWelcome();
+
+    var currentAgentMsg = null;
+    var currentToolsContainer = null;
+    var contentArea = null;
+
     CHAT_MESSAGES.forEach(function (m) {
-      var el = createMsgEl(m.role || 'user', renderMarkdown((m.content || '').trim()));
-      chatMessages.appendChild(el);
+      if (m.role === 'user') {
+        var el = createMsgEl('user', renderMarkdown((m.content || '').trim()));
+        chatMessages.appendChild(el);
+        currentAgentMsg = null;
+        currentToolsContainer = null;
+      } 
+      else if (m.role === 'tool') {
+        if (currentToolsContainer && m.tool_call_id) {
+          var block = currentToolsContainer.querySelector('[data-call-id="' + m.tool_call_id + '"]');
+          if (block) {
+            var outObj = {};
+            try { outObj = JSON.parse(m.content); } catch(e) { outObj = { stdout: m.content }; }
+            addToolOutput(block, outObj, null);
+          }
+        }
+      }
+      else if (m.role === 'assistant') {
+        if (!currentAgentMsg) {
+          currentAgentMsg = createMsgEl('assistant', '');
+          chatMessages.appendChild(currentAgentMsg);
+          contentArea = currentAgentMsg.querySelector('.msg-content');
+          contentArea.innerHTML = '';
+          currentToolsContainer = document.createElement('div');
+          currentToolsContainer.className = 'agent-steps';
+          contentArea.appendChild(currentToolsContainer);
+        }
+
+        if (m.content) {
+          if (m.content.startsWith('[Actions agent]\n') || m.content.includes('\n[Actions agent]\n')) {
+             var parseContent = m.content;
+             var actionsIdx = parseContent.indexOf('[Actions agent]\n');
+             if (actionsIdx > 0) {
+               var prefix = parseContent.substring(0, actionsIdx).trim();
+               if (prefix) {
+                 var preDiv = document.createElement('div');
+                 preDiv.className = 'agent-final-response';
+                 preDiv.innerHTML = renderMarkdown(prefix);
+                 contentArea.appendChild(preDiv);
+               }
+             }
+             var remainder = parseContent.substring(actionsIdx + 16);
+             var pieces = remainder.split(/\[Outil: /g);
+             var initialThink = pieces[0].trim();
+             if (initialThink) {
+               var tDiv = document.createElement('div');
+               tDiv.className = 'agent-thinking';
+               tDiv.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ' + renderMarkdown(initialThink);
+               currentToolsContainer.appendChild(tDiv);
+             }
+             for (var i = 1; i < pieces.length; i++) {
+               var p = pieces[i];
+               var nameEnd = p.indexOf(']');
+               var resStart = p.indexOf('\nRésultat: ');
+               var toolName = p.substring(0, nameEnd).trim();
+               var cmdStr = toolName;
+               if (resStart > -1) {
+                  cmdStr = p.substring(nameEnd + 1, resStart).trim();
+                  var afterResInfo = p.substring(resStart + 11).trim();
+                  var b = createToolBlock(toolName, cmdStr, cmdStr);
+                  currentToolsContainer.appendChild(b);
+                  addToolOutput(b, {stdout: afterResInfo}, null);
+               } else {
+                  var b2 = createToolBlock(toolName, p.substring(nameEnd + 1).trim(), p.substring(nameEnd + 1).trim());
+                  currentToolsContainer.appendChild(b2);
+                  addToolOutput(b2, {stdout: ''}, null);
+               }
+             }
+          } else {
+            if (m.tool_calls && m.tool_calls.length > 0) {
+              var thinkDiv = document.createElement('div');
+              thinkDiv.className = 'agent-thinking';
+              thinkDiv.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ' + renderMarkdown(m.content);
+              currentToolsContainer.appendChild(thinkDiv);
+            } else {
+              var responseDiv = document.createElement('div');
+              responseDiv.className = 'agent-final-response';
+              responseDiv.innerHTML = renderMarkdown(m.content);
+              contentArea.appendChild(responseDiv);
+            }
+          }
+        }
+
+        if (m.tool_calls && m.tool_calls.length > 0) {
+          m.tool_calls.forEach(function(tc) {
+            var fn = tc.function || {};
+            var argsStr = typeof fn.arguments === 'string' ? fn.arguments : JSON.stringify(fn.arguments);
+            var cmdName = fn.name;
+            var block = createToolBlock(fn.name, argsStr, cmdName);
+            block.dataset.callId = tc.id;
+            currentToolsContainer.appendChild(block);
+            setToolRunning(block);
+          });
+        }
+      }
     });
+
     setTimeout(function () { scrollToBottom(false); }, 50);
   }
 

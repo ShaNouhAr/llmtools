@@ -33,6 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Pentest tools - Passwords
 RUN apt-get update && apt-get install -y --no-install-recommends \
     john hashcat wordlists \
+    && mkdir -p /usr/share/wordlists/dirbuster \
+    && ln -s /usr/share/wordlists/dirb/common.txt /usr/share/wordlists/dirbuster/common.txt \
     && rm -rf /var/lib/apt/lists/*
 
 # Utilities + networking + SSH client
